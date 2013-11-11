@@ -1,12 +1,14 @@
 {
     "name":         "masspec_glue",
     "version":      "0.0.1",
-    "description":  "helps MZMine reach LCMS data indexed by binbase",
+    "description":  "helps MZMine reach LCMS data indexed by MiniX",
     "keywords":     ["MZMine","binbase","MiniX","LCMS"],
     "license":      "MIT",
     "author":       "Kevin Smith",
     "main":         "./main.js",
     "dependencies": {
-        "sqlite3":      ">=2.1.19"
+        "mongodb":      ">=1.3.19",
+        "properties":   ">=1.1.2",
+        "colors":       ">=0.6.0-1"
     }
 }

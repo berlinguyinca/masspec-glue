@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: main.js</title>
+    
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+    
+    <h1 class="page-title">Source: main.js</h1>
+    
+    
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source"><code>
+var http = require ('http');
+require ('DataUtils'); // patches merging etc. onto Object
+var cluster = require ('cluster');
+require ('colors');
+
+var FileCache = require ('FileCache');
+var endpoints = {
+    index:                  require ('./endpoints/index'),
+    data:                   require ('./endpoints/data')
+};
+
+/**
+Index and host LCMS output files.
+@name masspec-glue
+@module
+*/
+/**
+@name configuration
+@memberOf masspec-glue
+@class
+@property {number} port Listen on all incoming ports with the chosen port 
+    number.
+@property endpoints {Object.&lt;string,string>} Override the URLs used by service 
+    endpoints, by mapping the override name to the default name. Note 
+    that it is invalid to use any default endpoint as an override.
+@property {Number} processes Override the number of times to prefork the server.
+    The default is one child fork for each available CPU core.
+@property {FileCache.configuration} filesystem Configuration options for the 
+    retrieval and caching of files.
+@property {Object} interface Configuration documents for the service endpoints, 
+    mapped by either the default or overridden endpoint name.
+*/
+var config = {
+    port:           9001,
+    endpoints:      {},
+    processes:      require('os').cpus().length,
+    filesystem:     {},
+    interface:      {}
+};
+
+// for normalizing interface configs to one, reliable endpoint name
+var interfaceConfigs = {
+    index:              {},
+    getFilePaths:       {}
+};
+
+/**
+Set configuration options for the masspec-glue server.
+@param {masspec-glue.configuration} newConf
+*/
+var configure = function (newConf) {
+    config.merge (newConf);
+    if (newConf.interface) // update the canonical interface config docs 
+        for (var interfaceName in newConf.interface)
+            if (interfaceConfigs[interfaceName])
+                interfaceConfigs[interfaceName].merge (
+                    newConf.interface[interfaceName]
+                );
+            else if (
+                config.endpoints[interfaceName] && 
+                interfaceConfigs[config.endpoints[interfaceName]]
+            )
+                interfaceConfigs[conf.endpoints[interfaceName]].merge (
+                    newConf.interface[interfaceName]
+                );
+            else
+                console.log ((
+                    'cannot configure unknown endpoint "' +
+                    interfaceName + 
+                    '"'
+                ).red);
+    
+    if (cluster.isMaster)
+        return; // just store the config for now
+    
+    // child clusters should propogate config updates
+    if (newConf.filesystem)
+        FileCache.configure (newConf.filesystem);
+    if (newConf.interface) // update the canonical interface config docs 
+        for (var interfaceName in newConf.interface)
+            if (endpoints[interfaceName])
+                endpoints[interfaceName].configure (newConf[interfaceName]);
+            else if (
+                config.endpoints[interfaceName] && 
+                endpoints[config.endpoints[interfaceName]]
+            )
+                endpoints[config.endpoints[interfaceName]].configure (
+                    newConf[interfaceName]
+                );
+            else
+                console.log ((
+                    'cannot configure unknown endpoint "' +
+                    interfaceName + 
+                    '"'
+                ).red);
+};
+
+/**
+Finalize the configuration, do all necessary initial setup, prefork, and 
+    listen on the configured socket.
+@param {function} callback
+*/
+var start = function (callback) {
+    if (cluster.isMaster) {
+        cluster.setupMaster ({
+            exec:       module.filename
+        });
+        console.log (
+            'Starting masspec-glue server at port '.white +
+            config.port.toString().blue +
+            '\nPreforking to '.white +
+            config.processes.toString().blue +
+            ' processes.'.white
+        );
+        
+        var waiting = config.processes;
+        for (var i=0; i&lt;config.processes; i++) {
+            var worker = cluster.fork();
+            worker.send (config);
+        }
+        if (callback)
+            process.nextTick (callback);
+        return;
+    }
+    
+    // child forks need to propogate the start signal
+    FileCache.start (function(){
+        var waiting = 0;
+        for (var interfaceName in endpoints) {
+            waiting++;
+            endpoints[interfaceName].start (function(){
+                if (--waiting)
+                    return; // more endpoints working
+                if (callback) callback();
+            });
+        }
+        
+        // finalize endpoint overrides
+        for (var override in config.endpoints) {
+            var old = config.endpoints[override];
+            if (endpoints[old]) {
+                console.log (
+                    'overriding endpoint "'.white +
+                    old.blue + 
+                    '" with new endpoints "'.white +
+                    override.blue
+                );
+                endpoints[override] = endpoints[old];
+                delete endpoints[old];
+            }
+        }
+    });
+};
+
+
+// finally - listen for configurations to be sent from a master process
+process.on ('message', function (newConf) {
+    configure (newConf);
+    start (function(){ 
+        var httpserver = http.createServer (function (request, response) {
+            for (var point in endpoints)
+                if (request.url.slice (1, point.length+1) == point) {
+                    endpoints[point].react (request, response);
+                    return;
+                }
+            response.writeHead (404, {
+                "content-type":     "text/plain"
+            });
+            response.write ("404 Not Found");
+            response.end ();
+        });
+        httpserver.listen (config.port);
+        console.log (
+            'forked server listening on port '.green + 
+            config.port.toString().blue
+        );
+    });
+});
+
+module.exports = {
+    configure:      configure,
+    start:          start,
+    modj:           module
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Index</a></h2><h3>Modules</h3><ul><li><a href="module-endpoint_data.html">endpoint_data</a></li><li><a href="module-endpoint_index.html">endpoint_index</a></li><li><a href="module-FileCache.html">FileCache</a></li><li><a href="module-masspec-glue.html">masspec-glue</a></li></ul><h3>Classes</h3><ul><li><a href="endpoint_getFile.configuration.html">configuration</a></li><li><a href="endpoint_index.configuration.html">configuration</a></li><li><a href="FileCache.configuration.html">configuration</a></li><li><a href="masspec-glue.configuration.html">configuration</a></li></ul>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-dev</a> on Mon Nov 11 2013 13:46:54 GMT-0800 (PST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
