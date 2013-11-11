@@ -1,13 +1,13 @@
 
 var http = require ('http');
-require ('DataUtils'); // patches merging etc. onto Object
+require ('./DataUtils'); // patches merging etc. onto Object
 var cluster = require ('cluster');
 require ('colors');
 
-var FileCache = require ('FileCache');
+var FileCache = require ('./FileCache');
 var endpoints = {
-    index:                  require ('./endpoints/index'),
-    data:                   require ('./endpoints/data')
+    index:                  require ('./index'),
+    data:                   require ('./data')
 };
 
 /**

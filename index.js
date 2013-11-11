@@ -1,5 +1,5 @@
 
-var FileCache = require ('FileCache');
+var FileCache = require ('./FileCache');
 
 /**
 Adds or removes directories from the file index.

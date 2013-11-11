@@ -1,6 +1,6 @@
 
 var fs = require ('fs');
-var FileCache = require ('FileCache');
+var FileCache = require ('./FileCache');
 /**
 Retrieves masspec data files by unique id.
 @name endpoint_data
