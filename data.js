@@ -63,6 +63,9 @@ var react = function (request, response) {
             "Content-Length":           size
         });
         var fileStream = fs.createReadStream (path);
+        fileStream.on ('error', function () {
+            response.end ();
+        });
         fileStream.pipe (response);
     });
 };

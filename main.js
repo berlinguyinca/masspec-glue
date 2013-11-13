@@ -180,6 +180,5 @@ process.on ('message', function (newConf) {
 
 module.exports = {
     configure:      configure,
-    start:          start,
-    modj:           module
+    start:          start
 };
