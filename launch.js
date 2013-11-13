@@ -1,10 +1,14 @@
+#!/usr/bin/env node
 
 var fs = require ('fs');
 var properties = require ('properties');
 var server = require ('./main');
 // require ('colors'); implied by requiring main
 var localdir = require('path').dirname (module.filename);
-var configFilename = process.env.npm_package_config_config;
+
+if ()
+var configFilename = process.argv.length > 2 ?
+    process.argv[2] : process.env.npm_package_config_config;
 
 fs.readFile (configFilename, function (err, configFileStr) {
     if (err || !configFileStr) {
