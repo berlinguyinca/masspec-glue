@@ -13,11 +13,12 @@ Associates unique filenames with file paths on the system. Performs
 /**
 @class configuration
 @memberOf FileCache
-@property {string} dbPath Local or absolute filepath at which the path 
-    cache database is stored. If multiple application servers are used, they 
-    should share as few databases as possible - WARNING: sqlite3 and NFS 
-    don't get along. Multiple application servers can feel free to build 
-    their own copies of the cache.
+@property {string} databaseIP IP address of a mongod or mongos instance.
+    Default: "127.0.0.1"
+@property {number} databasePort Port number for the database server. 
+    Default: 27017.
+@property {string} databaseName The Name of the Database used by 
+    masspec_glue on the configured mongodb instance.
 @property {Array.<string>} mountPoints Local or absolute filepath(s) within 
     which directories and files are to be indexed. The indexed filesystem 
     is a union of these directories.

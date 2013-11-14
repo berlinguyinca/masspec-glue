@@ -26,7 +26,7 @@ Index and host LCMS output files.
     that it is invalid to use any default endpoint as an override.
 @property {Number} processes Override the number of times to prefork the server.
     The default is one child fork for each available CPU core.
-@property {FileCache.configuration} filesystem Configuration options for the 
+@property {FileCache.configuration} FileCache Configuration options for the 
     retrieval and caching of files.
 @property {Object} interface Configuration documents for the service endpoints, 
     mapped by either the default or overridden endpoint name.
@@ -35,7 +35,7 @@ var config = {
     port:           9001,
     endpoints:      {},
     processes:      require('os').cpus().length,
-    filesystem:     {},
+    FileCache:     {},
     interface:      {}
 };
 
