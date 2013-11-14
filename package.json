@@ -1,6 +1,6 @@
 {
     "name":         "masspec_glue",
-    "version":      "0.0.2",
+    "version":      "0.0.3",
     "description":  "helps MZMine reach LCMS data indexed by MiniX",
     "keywords":     ["MZMine","binbase","MiniX","LCMS"],
     "license":      "MIT",
