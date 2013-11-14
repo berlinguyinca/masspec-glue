@@ -133,7 +133,13 @@ var start = function (callback) {
                                 process.exit();
                             }
                             directoriesCollection = col;
-                            callback();
+                            directoriesCollection.ensureIndex ({next:1}, function (err) {
+                                if (err) {
+                                    console.log ('ERROR - could not ensure database index'.red);
+                                    process.exit();
+                                }
+                                callback ();
+                            });
                         });
                     }
                 ], callback);
@@ -158,7 +164,7 @@ Add a directory expected to be found in one of the
 */
 var indexDirectory = function (dir, callback) {
     async.each (config.mountPoints, function (point, callback) {
-        scan (point + dir, callback);
+        scan (point + dir, callback, undefined, undefined, true);
     }, callback);
 };
 
@@ -182,7 +188,7 @@ var getPath = function (id, callback) {
 
 
 // recursive
-var scan = function (dir, callback, stats, rec) {
+var scan = function (dir, callback, stats, rec, force) {
     if (dir[dir.length-1] != '/')
         dir += '/';
     var rec;
@@ -203,7 +209,7 @@ var scan = function (dir, callback, stats, rec) {
         if (!stats)
             return callback (false);
         
-        if (rec && rec.m == stats.mtime.getTime())
+        if (!force && rec && rec.m == stats.mtime.getTime())
             // directory is unmodified
             return callback (true);
         
@@ -224,65 +230,66 @@ var scan = function (dir, callback, stats, rec) {
                     console.log ('db returned error while writing to "directories"');
                     console.log (err);
                 }
+                fs.readdir (dir, function (err, files) {
+                    if (err) {
+                        console.log ('sudden fs read error - is '+dir+' a directory?');
+                        return callback (false);
+                    }
+                    
+                    if (!files || !files.length)
+                        return callback (true);
+                    
+                    // search for data files and directories
+                    async.each (files, function (fname, callback) {
+                        fs.stat (dir + fname, function (err, stats) {
+                            if (!stats) {
+                                console.log ('no stats for ' + dir + fname);
+                                return callback();
+                            }
+                            if (stats.isDirectory())
+                                // recurse into directory
+                                return scan (dir + fname + '/', callback, stats, undefined, force);
+                            
+                            // evaluate the file extension
+                            // trailing extensions first
+                            var workingName = fname;
+                            for (var i=0,j=config.trailingExtensions.length; i<j; i++) {
+                                var extension = config.trailingExtensions[i];
+                                if (workingName.slice (-1 * extension.length) == extension) {
+                                    // trailing extension matched
+                                    workingName = workingName.slice (0, -1 * (extension.length+1));
+                                    break;
+                                }
+                            }
+                            // primary extensions second
+                            for (var i=0,j=config.fileExtensions.length; i<j; i++) {
+                                var extension = config.fileExtensions[i];
+                                if (workingName.slice (-1 * extension.length) == extension) {
+                                    // primary extension matched - we have a valid file!
+                                    workingName = workingName.slice (0, -1 * (extension.length+1));
+                                    filesCollection.update (
+                                        {_id:workingName},
+                                        {$set:{path:dir+fname, size:stats.size}},
+                                        {upsert:true, safe:true},
+                                        function (err) {
+                                            if (err) {
+                                                console.log ('db had an error while writing to "files"');
+                                                console.log (err);
+                                            }
+                                            callback ();
+                                        }
+                                    );
+                                    return;
+                                }
+                            }
+                        });
+                    }, function () {
+                        // this is the final end of a successful scan
+                        callback (true);
+                    });
+                });
             }
         );
-        fs.readdir (dir, function (err, files) {
-            if (err) {
-                console.log ('sudden fs read error - is '+dir+' a directory?');
-                return callback (false);
-            }
-            
-            if (!files || !files.length)
-                return callback (true);
-            
-            // search for data files and directories
-            async.each (files, function (fname, callback) {
-                fs.stat (dir + fname, function (err, stats) {
-                    if (!stats) {
-                        console.log ('no stats for ' + dir + fname);
-                        return callback();
-                    }
-                    if (stats.isDirectory())
-                        // recurse into directory
-                        return scan (dir + fname + '/', callback, stats);
-                    
-                    // evaluate the file extension
-                    // trailing extensions first
-                    var workingName = fname;
-                    for (var i=0,j=config.trailingExtensions.length; i<j; i++) {
-                        var extension = config.trailingExtensions[i];
-                        if (workingName.slice (-1 * extension.length) == extension) {
-                            // trailing extension matched
-                            workingName = workingName.slice (0, -1 * (extension.length+1));
-                            break;
-                        }
-                    }
-                    // primary extensions second
-                    for (var i=0,j=config.fileExtensions.length; i<j; i++) {
-                        var extension = config.fileExtensions[i];
-                        if (workingName.slice (-1 * extension.length) == extension) {
-                            // primary extension matched - we have a valid file!
-                            workingName = workingName.slice (0, -1 * (extension.length+1));
-                            filesCollection.update (
-                                {_id:workingName},
-                                {$set:{path:dir+fname, size:stats.size}},
-                                {upsert:true, safe:true},
-                                function (err) {
-                                    if (err) {
-                                        console.log ('db had an error while writing to "files"');
-                                        console.log (err);
-                                    }
-                                }
-                            );
-                            return callback ();
-                        }
-                    }
-                });
-            }, function () {
-                // this is the final end of a successful scan
-                callback (true);
-            });
-        });
     });
 };
 

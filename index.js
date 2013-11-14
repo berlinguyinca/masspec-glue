@@ -72,7 +72,7 @@ var react = function (request, response) {
             });
             response.end (result);
         });
-    } else if (request.method.toLowerCase() == "delete")
+    } else if (request.method.toLowerCase() == "delete") {
         FileCache.dropDirectory (dir, function () {
             var result = '"index deleted"';
             response.writeHead (200, {
@@ -81,7 +81,7 @@ var react = function (request, response) {
             });
             response.end (result);
         });
-    else {
+    } else {
         var result = '"index invalid verb"';
         response.writeHead (404, {
             "Content-Type":             "application/json",

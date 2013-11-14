@@ -8,8 +8,10 @@
             "$LIBDIR/tests/playground/mount1",
             "$LIBDIR/tests/playground/mount2",
             "$LIBDIR/tests/playground/mount3"
-        ]
-        refresh:            1000 * 5,
-        refreshFuzz:        1000 * 5
+        ],
+        "refresh":          1000,
+        "refreshFuzz":      1000,
+        "heartRate":         200,
+        "heartRateFuzz":     200
     }
 }

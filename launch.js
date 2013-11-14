@@ -6,7 +6,6 @@ var server = require ('./main');
 // require ('colors'); implied by requiring main
 var localdir = require('path').dirname (module.filename);
 
-if ()
 var configFilename = process.argv.length > 2 ?
     process.argv[2] : process.env.npm_package_config_config;
 
@@ -25,10 +24,11 @@ fs.readFile (configFilename, function (err, configFileStr) {
                 for (var i=0,j=val.length; i<j; i++)
                     if (match = val[i].match (/(^|[^\\])\$LIBDIR/)) {
                         var cut = Math.max (0,match.index-1);
+                        var cut = match.index ? match.index + 1 : 0;
                         val[i] = 
                             val[i].slice (0,cut) + 
                             localdir +
-                            val[i].slice (cut+9);
+                            val[i].slice (cut+(cut ? 7 : match[0].length));
                     }
                 return val;
             });
@@ -44,7 +44,6 @@ fs.readFile (configFilename, function (err, configFileStr) {
                         var match;
                         while (match = value.match (/(?:^|[^\\])\$LIBDIR/)) {
                             var cut = match.index ? match.index + 1 : 0;
-                            console.log (value.slice (cut) + '\n');
                             value = 
                                 value.slice (0,cut) + 
                                 localdir +

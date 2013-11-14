@@ -10,6 +10,7 @@
         "masspec_glue": "./launch.js"
     },
     "scripts":      {
+        "test":         "node tests/test.js",
         "start":        "forever launch.js"
     },
     "dependencies": {

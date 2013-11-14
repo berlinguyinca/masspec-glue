@@ -117,10 +117,20 @@ var start = function (callback) {
         var waiting = config.processes;
         for (var i=0; i<config.processes; i++) {
             var worker = cluster.fork();
+            worker.on ('message', function (msg) {
+                if (msg == "online") {
+                    if (--waiting) return;
+                    console.log (
+                      '\n=========================== '.green +
+                        'Masspec Glue Server Online'.white + 
+                        '===========================\n'.green
+                    );
+                    if (callback)
+                        callback ();
+                }
+            });
             worker.send (config);
         }
-        if (callback)
-            process.nextTick (callback);
         return;
     }
     
@@ -175,6 +185,7 @@ process.on ('message', function (newConf) {
             'forked server listening on port '.green + 
             config.port.toString().blue
         );
+        process.send ("online");
     });
 });
 
