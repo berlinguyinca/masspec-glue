@@ -75,7 +75,7 @@ var configure = function (newConf) {
         return; // just store the config for now
     
     // child clusters should propogate config updates
-    if (newConf.filesystem)
+    if (newConf.FileCache)
         FileCache.configure (newConf.FileCache);
     if (newConf.interface) // update the canonical interface config docs 
         for (var interfaceName in newConf.interface)
