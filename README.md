@@ -1,9 +1,11 @@
 
-
+Documentation
+=============
+http://shenanigans.github.io/masspec_glue/
 
 Deployment
 ==========
-* needs a mongodb instance and appropriate configuration, see tests/testconf.properties
+* needs a mongodb instance and appropriate configuration
 * # npm install git+https://github.com/shenanigans/masspec_glue.git -g
 * # npm install -g forever
 * $ masspec_glue /absolute/path/to/config.properties
