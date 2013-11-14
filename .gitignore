@@ -1,5 +1,1 @@
-node_modules/*
-!node_modules/FileCache.js
-!node_modules/DataUtils.js
-!node_modules/Map.js
-
+node_modules
