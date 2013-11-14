@@ -35,7 +35,7 @@ var config = {
     port:           9001,
     endpoints:      {},
     processes:      require('os').cpus().length,
-    FileCache:     {},
+    FileCache:      {},
     interface:      {}
 };
 
@@ -76,7 +76,7 @@ var configure = function (newConf) {
     
     // child clusters should propogate config updates
     if (newConf.filesystem)
-        FileCache.configure (newConf.filesystem);
+        FileCache.configure (newConf.FileCache);
     if (newConf.interface) // update the canonical interface config docs 
         for (var interfaceName in newConf.interface)
             if (endpoints[interfaceName])
