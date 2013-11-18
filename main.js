@@ -167,7 +167,7 @@ var start = function (callback) {
 // finally - listen for configurations to be sent from a master process
 process.on ('message', function (newConf) {
     configure (newConf);
-    start (function(){ 
+    start (function(){
         var httpserver = http.createServer (function (request, response) {
             for (var point in endpoints)
                 if (request.url.slice (1, point.length+1) == point) {

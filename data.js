@@ -8,15 +8,27 @@ Retrieves masspec data files by unique id.
 */
 /**
 @name configuration
-@memberOf endpoint_getFile
+@memberOf endpoint_data
 @class
+@property {Object.<string,string>} MIMETypes Maps file extensions to MIME 
+    type strings. Trailing extensions such as .gz will be configured 
+    automatically during the {@link endpoint_data.start|start phase}.
 */
 var config = {
+    MIMETypes:          {
+        ".xml":             "MZMine",
+        ".mzdata":          "MZmine.data",
+        ".mzxml":           "MZmine.xml",
+        ".mzml":            "MZmine.mzml",
+        ".cdf":             "Unidata.NetCDF",
+        ".raw":             "Xcalibur.raw",
+        ".csv":             "Agilent.csv"
+    }
 };
 
 /**
 Set configuration options.
-@param {endpoint_getFile.configuration} newConf
+@param {endpoint_data.configuration} newConf
 */
 var configure = function (newConf) {
     config.merge (newConf);
@@ -27,6 +39,17 @@ Finalize config and prepare to react to requests.
 @param {function} callback
 */
 var start = function (callback) {
+    var add = {};
+    for (ext in config.MIMETypes) {
+        var mimetype = config.MIMETypes[ext];
+        add[ext+'.gz'] = mimetype;
+        add[ext+'.tar'] = mimetype;
+        add[ext+'.tar.gz'] = mimetype;
+        add[ext+'.zip'] = mimetype;
+    }
+    for (ext in add)
+        config.MIMETypes[ext] = add[ext];
+    
     process.nextTick (callback);
 };
 
@@ -47,7 +70,9 @@ var react = function (request, response) {
         response.end (result);
         return;
     }
-    FileCache.getPath (request.url.slice (skiplen), function (path, size) {
+    
+    var id = request.url.slice (skiplen);
+    FileCache.getPath (id, function (path, ext, size) {
         if (!path) {
             var result = '"data not found"';
             response.writeHead (404, {
@@ -59,8 +84,11 @@ var react = function (request, response) {
         }
         
         response.writeHead (200, {
-            "Content-Type":             "application/xml",
-            "Content-Length":           size
+            "Content-Type":             config.MIMETypes[ext] ? 
+                                         config.MIMETypes[ext] :
+                                         "application/xml",
+            "Content-Length":           size,
+            "Content-Disposition":      'attachment; filename="'+id+ext+'"'
         });
         var fileStream = fs.createReadStream (path);
         fileStream.on ('error', function () {

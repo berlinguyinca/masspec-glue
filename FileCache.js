@@ -47,7 +47,7 @@ config = {
     fileExtensions:     [
         "cdf",
         "txt",
-        "mzXml"
+        "mzxml"
     ],
     trailingExtensions: [
         "gz",
@@ -182,7 +182,7 @@ var getPath = function (id, callback) {
         fs.stat (rec.path, function (err, stats) {
             if (err || !stats)
                 return callback();
-            callback (rec.path, rec.size);
+            callback (rec.path, rec.ext, rec.size);
         });
     });
 };
@@ -253,11 +253,13 @@ var scan = function (dir, callback, stats, rec, force) {
                             
                             // evaluate the file extension
                             // trailing extensions first
-                            var workingName = fname;
+                            var fileExtension = "";
+                            var workingName = fname.toLowerCase();
                             for (var i=0,j=config.trailingExtensions.length; i<j; i++) {
                                 var extension = config.trailingExtensions[i];
                                 if (workingName.slice (-1 * extension.length) == extension) {
                                     // trailing extension matched
+                                    fileExtension += '.'+extension;
                                     workingName = workingName.slice (0, -1 * (extension.length+1));
                                     break;
                                 }
@@ -267,10 +269,11 @@ var scan = function (dir, callback, stats, rec, force) {
                                 var extension = config.fileExtensions[i];
                                 if (workingName.slice (-1 * extension.length) == extension) {
                                     // primary extension matched - we have a valid file!
+                                    fileExtension += '.'+extension;
                                     workingName = workingName.slice (0, -1 * (extension.length+1));
                                     filesCollection.update (
                                         {_id:workingName},
-                                        {$set:{path:dir+fname, size:stats.size}},
+                                        {$set:{path:dir+fname, ext:fileExtension, size:stats.size}},
                                         {upsert:true, safe:true},
                                         function (err) {
                                             if (err) {
