@@ -7,7 +7,8 @@ require ('colors');
 var FileCache = require ('./FileCache');
 var endpoints = {
     index:                  require ('./index'),
-    data:                   require ('./data')
+    data:                   require ('./data'),
+    stat:                   require ('./stat')
 };
 
 /**
