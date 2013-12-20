@@ -244,7 +244,7 @@ var scan = function (dir, callback, stats, rec, force) {
                 }
                 fs.readdir (dir, function (err, files) {
                     if (err) {
-                        console.log ('ERROR: sudden fs read error. Expected directory at '+dir+);
+                        console.log ('ERROR: sudden fs read error. Expected directory at '+dir);
                         return callback (false);
                     }
                     
