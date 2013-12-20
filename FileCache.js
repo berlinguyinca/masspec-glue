@@ -38,6 +38,10 @@ Associates unique filenames with file paths on the system. Performs
 @property {number} heartRateFuzz Maximum number of milliseconds to be 
     randomly added to the heartRate each cycle. Helps multiple processes 
     avoid bothering the database at the same time. Default: 1000ms.
+@property {number} statsInFlight Number of simultaneous file index
+    operations to attempt. A low number here prevents hammering the db or 
+    starving the event loop, but overly low numbers may reduce parallelism 
+    and therefor performance. Default: 50.
 */
 config = {
     databaseIP:         "127.0.0.1",
@@ -58,7 +62,8 @@ config = {
     refresh:            1000 * 60 * 3, // three minutes
     refreshFuzz:        1000 * 60 * 3,  // three minutes
     heartRate:          1000,
-    heartRateFuzz:      1000
+    heartRateFuzz:      1000,
+    statsInFlight:      50
 };
 
 /**
@@ -215,6 +220,11 @@ var scan = function (dir, callback, stats, rec, force) {
             return callback (true);
         
         // directory needs a fresh scan
+        var novelDir;
+        if (!rec) {
+            console.log ("Indexing new directory "+dir);
+            novelDir = true;
+        }
         directoriesCollection.update (
             {_id:dir},
             {$set:{
@@ -228,12 +238,13 @@ var scan = function (dir, callback, stats, rec, force) {
             {safe:true, upsert:true},
             function (err) {
                 if (err) {
-                    console.log ('db returned error while writing to "directories"');
+                    console.log ('ERROR: db failure while writing to "directories"');
                     console.log (err);
+                    console.log (err.stack);
                 }
                 fs.readdir (dir, function (err, files) {
                     if (err) {
-                        console.log ('sudden fs read error - is '+dir+' a directory?');
+                        console.log ('ERROR: sudden fs read error. Expected directory at '+dir+);
                         return callback (false);
                     }
                     
@@ -241,10 +252,10 @@ var scan = function (dir, callback, stats, rec, force) {
                         return callback (true);
                     
                     // search for data files and directories
-                    async.each (files, function (fname, callback) {
+                    async.eachLimit (files, config.statsInFlight, function (fname, callback) {
                         fs.stat (dir + fname, function (err, stats) {
-                            if (!stats) {
-                                console.log ('no stats for ' + dir + fname);
+                            if (err || !stats) {
+                                console.log ('ERROR: stat failed for ' + dir + fname);
                                 return callback();
                             }
                             if (stats.isDirectory())
@@ -269,6 +280,8 @@ var scan = function (dir, callback, stats, rec, force) {
                                 var extension = config.fileExtensions[i];
                                 if (workingName.slice (-1 * extension.length) == extension) {
                                     // primary extension matched - we have a valid file!
+                                    if (novelDir)
+                                        console.log ('    Indexed new file '+dir+fname);
                                     fileExtension += '.'+extension;
                                     workingName = workingName.slice (0, -1 * (extension.length+1));
                                     filesCollection.update (
@@ -277,8 +290,9 @@ var scan = function (dir, callback, stats, rec, force) {
                                         {upsert:true, safe:true},
                                         function (err) {
                                             if (err) {
-                                                console.log ('db had an error while writing to "files"');
+                                                console.log ('ERROR: db failure while writing to "files"');
                                                 console.log (err);
+                                                console.log (err.stack);
                                             }
                                             callback ();
                                         }
