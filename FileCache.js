@@ -281,7 +281,7 @@ var scan = function (dir, callback, stats, rec, force) {
                                 if (workingName.slice (-1 * extension.length) == extension) {
                                     // primary extension matched - we have a valid file!
                                     if (novelDir)
-                                        console.log ('    Indexed new file '+dir+fname);
+                                        console.log ('  Indexed new file '+dir+fname);
                                     fileExtension += '.'+extension;
                                     workingName = workingName.slice (0, -1 * (extension.length+1));
                                     filesCollection.update (
