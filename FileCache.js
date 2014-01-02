@@ -121,6 +121,7 @@ var start = function (callback) {
             var dbsrv = new Mongo.Server (config.databaseIP, config.databasePort, {});
             var db = new Mongo.Db (config.databaseName, dbsrv, {journal:false});
             db.open (function () {
+                console.log ('opened database connection')
                 async.parallel ([
                     function (callback) {
                         db.collection ("files", function (err, col) {
@@ -282,8 +283,6 @@ var scan = function (dir, callback, stats, rec, force) {
                                     // primary extension matched - we have a valid file!
                                     if (novelDir)
                                         console.log ('  Indexed new file '+dir+fname);
-                                    fileExtension += '.'+extension;
-                                    workingName = workingName.slice (0, -1 * (extension.length+1));
                                     filesCollection.update (
                                         {_id:workingName},
                                         {$set:{path:dir+fname, ext:fileExtension, size:stats.size}},
