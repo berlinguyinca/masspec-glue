@@ -1,8 +1,8 @@
 {
     "name":         "masspec_glue",
-    "version":      "0.0.3",
-    "description":  "helps MZMine reach LCMS data indexed by MiniX",
-    "keywords":     ["MZMine","binbase","MiniX","LCMS"],
+    "version":      "0.1.0",
+    "description":  "Helps MZMine reach data indexed by MiniX",
+    "keywords":     ["MZMine"],
     "license":      "MIT",
     "author":       "Kevin Smith",
     "main":         "./main.js",

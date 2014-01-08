@@ -36,10 +36,9 @@ var tryServer = function (method, path, callback) {
     request.end ();
 };
 
-console.log (
-    '========================== '.green +
-    'Testing Masspec Glue Server '.white +
-    '==========================\n'.green
+console.log ('\n\n\
+    Testing Masspec Glue Server\n\
+......................................................................................'.blue
 );
 fs.readFile (localdir + '/tests/testconf.json', function (err, configFileStr) {
     if (err || !configFileStr) {
@@ -74,94 +73,39 @@ fs.readFile (localdir + '/tests/testconf.json', function (err, configFileStr) {
                 });
             },
             function (callback) {
-                tryServer ("post", "/index/able", function (data) {
-                    if (data !== '"index ok"') {
-                        console.log ('ERROR - server fails to index existing directory.'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                tryServer ("post", "/index/able", function (data) {
-                    if (data !== '"index ok"') {
-                        console.log ('ERROR - server fails to index directory already indexed.'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                tryServer ("post", "/index/chezwiz", function (data) {
-                    if (data !== '"index not found"') {
-                        console.log ('ERROR - server does not fail when indexing non-existent directory.'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                tryServer ("get", "/data/twertwergbhndgf", function (data) {
+                tryServer ("get", "/data/twertwergbhndgf.mzxml", function (data) {
                     if (data !== '<thing>twertwergbhndgf</thing>\n') {
-                        console.log ('ERROR - failed to return correct data file (mount0/able/twertwergbhndgf).'.red);
+                        console.log ('ERROR - failed to return correct data file (mount0/able/twertwergbhndgf.mzxml).'.red);
                         process.exit ();
                     }
                     callback ();
                 });
             },
             function (callback) {
-                tryServer ("get", "/data/drfdfgdfgdbnnbn", function (data) {
+                tryServer ("get", "/data/drfdfgdfgdbnnbn.xml", function (data) {
                     if (data !== '<thing>drfdfgdfgdbnnbn</thing>\n') {
-                        console.log ('ERROR - failed to return correct data file (mount3/able/zebra/drfdfgdfgdbnnbn).'.red);
+                        console.log ('ERROR - failed to return correct data file (mount3/able/zebra/drfdfgdfgdbnnbn.xml).'.red);
                         process.exit ();
                     }
                     callback ();
                 });
             },
             function (callback) {
-                tryServer ("get", "/data/udgfhjdfgdr6yudrtf", function (data) {
+                tryServer ("get", "/data/udgfhjdfgdr6yudrtf.xml", function (data) {
                     if (data !== '<thing>udgfhjdfgdr6yudrtf</thing>\n') {
-                        console.log ('ERROR - failed to return correct data file (mount2/able/yoke/udgfhjdfgdr6yudrtf).'.red);
+                        console.log ('ERROR - failed to return correct data file (mount2/able/yoke/udgfhjdfgdr6yudrtf.xml).'.red);
                         process.exit ();
                     }
                     callback ();
                 });
             },
             function (callback) {
-                tryServer ("get", "/data/uer6tyudgfhfg", function (data) {
+                tryServer ("get", "/data/uer6tyudgfhfg.xml", function (data) {
                     if (data !== '<thing>uer6tyudgfhfg</thing>\n') {
-                        console.log ('ERROR - failed to return correct data file (mount0/able/yoke/uer6tyudgfhfg).'.red);
+                        console.log ('ERROR - failed to return correct data file (mount0/able/yoke/uer6tyudgfhfg.xml).'.red);
                         process.exit ();
                     }
                     callback ();
-                });
-            },
-            function (callback) {
-                console.log ('    testing the refresh job. Please wait for a few seconds.'.white);
-                tryServer ("post", "/index/baker", function (data) {
-                    if (data !== '"index ok"') {
-                        console.log ('ERROR - failed to index additional directories.'.red);
-                        process.exit ();
-                    }
-                    tryServer ("post", "/index/baker", function (data) {
-                        if (data !== '"index ok"') {
-                            console.log ('ERROR - failed to index additional directories.'.red);
-                            process.exit ();
-                        }
-                        tryServer ("post", "/index/charlie", function (data) {
-                            if (data !== '"index ok"') {
-                                console.log ('ERROR - failed to index additional directories.'.red);
-                                process.exit ();
-                            }
-                            tryServer ("post", "/index/delta", function (data) {
-                                if (data !== '"index ok"') {
-                                    console.log ('ERROR - failed to index additional directories.'.red);
-                                    process.exit ();
-                                }
-                                callback ();
-                            });
-                        });
-                    });
                 });
             },
             function (callback) {
@@ -175,9 +119,10 @@ fs.readFile (localdir + '/tests/testconf.json', function (err, configFileStr) {
                         "<thing>"+id+"</thing>"
                     );
                 }
+                console.log ('   ...waiting for refresh job test...'.white)
                 setTimeout (function () {
                     async.each (ids, function (id, callback) {
-                        tryServer ("get", "/data/"+id, function (data) {
+                        tryServer ("get", "/data/"+id+".xml", function (data) {
                             if (data !== '<thing>'+id+'</thing>') {
                                 console.log ('ERROR - failed to load new files.'.red);
                                 process.exit ();
@@ -193,74 +138,11 @@ fs.readFile (localdir + '/tests/testconf.json', function (err, configFileStr) {
                         });
                     }, callback ());
                 }, 5000); // 10s
-            },
-            function (callback) {
-                console.log ('refresh job works perfectly. Now removing some indexes.'.white);
-                tryServer ("delete", "/index/able/zebra", function (data) {
-                    if (data !== '"index deleted"') {
-                        console.log ('ERROR - failed to delete an index.'.red);
-                        process.exit ();
-                    }
-                    tryServer ("delete", "/index/charlie", function (data) {
-                        if (data !== '"index deleted"') {
-                            console.log ('ERROR - failed to delete an index.'.red);
-                            process.exit ();
-                        }
-                        callback ();
-                    });
-                });
-            },
-            function (callback) {
-                tryServer ("get", "/data/drfdfgdfgdbnnbn", function (data) {
-                    if (data !== '"data not found"') {
-                        console.log ('ERROR - returned a de-indexed file.'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                tryServer ("get", "/data/yudrtfyhudfgch", function (data) {
-                    if (data !== '"data not found"') {
-                        console.log ('ERROR - returned a de-indexed file.'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                tryServer ("get", "/data/ftyu7d67udrftgthe5r", function (data) {
-                    if (data !== '"data not found"') {
-                        console.log ('ERROR - returned a de-indexed file.'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                console.log ('index deletion works fine. Now add a directory with previously deleted children.'.white);
-                tryServer ("post", "/index/able", function (data) {
-                    if (data !== '"index ok"') {
-                        console.log ('ERROR - failed to re-index a directory'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
-            },
-            function (callback) {
-                tryServer ("get", "/data/drfdfgdfgdbnnbn", function (data) {
-                    if (data !== '<thing>drfdfgdfgdbnnbn</thing>\n') {
-                        console.log ('ERROR - failed to re-index a file'.red);
-                        process.exit ();
-                    }
-                    callback ();
-                });
             }
         ], function () {
-            console.log (
-              '\n======================= '.green +
-                'All Tests Completed Successfully '.white +
-                '========================\n'.green
+            console.log ('\n\n\
+......................................................................................\n\
+    All Tests Completed Successfully\n'.blue
             );
             
             setTimeout (function(){

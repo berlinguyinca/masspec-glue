@@ -1,12 +1,12 @@
 
 var http = require ('http');
-require ('./DataUtils'); // patches merging etc. onto Object
+var async = require ('async');
 var cluster = require ('cluster');
+require ('./DataUtils'); // patches merging etc. onto Object
 require ('colors');
 
 var FileCache = require ('./FileCache');
 var endpoints = {
-    index:                  require ('./index'),
     data:                   require ('./data'),
     stat:                   require ('./stat')
 };
@@ -42,7 +42,6 @@ var config = {
 
 // for normalizing interface configs to one, reliable endpoint name
 var interfaceConfigs = {
-    index:              {},
     getFilePaths:       {}
 };
 
@@ -114,24 +113,20 @@ var start = function (callback) {
             config.processes.toString().blue +
             ' processes.'.white
         );
-        
-        var waiting = config.processes;
-        for (var i=0; i<config.processes; i++) {
+
+        async.timesSeries (config.processes, function (n, callback) {
             var worker = cluster.fork();
-            worker.on ('message', function (msg) {
-                if (msg == "online") {
-                    if (--waiting) return;
-                    console.log (
-                      '\n=========================== '.green +
-                        'Masspec Glue Server Online'.white + 
-                        '===========================\n'.green
-                    );
-                    if (callback)
-                        callback ();
-                }
-            });
+            worker.on ('message', function (){callback();});
             worker.send (config);
-        }
+        }, function () {
+            console.log ("\
+===================================================================\n\
+                   masspec_glue server running\n\
+===================================================================\n\
+".green
+            );
+            callback ();
+        });
         return;
     }
     

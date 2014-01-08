@@ -121,7 +121,7 @@ var start = function (callback) {
             var dbsrv = new Mongo.Server (config.databaseIP, config.databasePort, {});
             var db = new Mongo.Db (config.databaseName, dbsrv, {journal:false});
             db.open (function () {
-                console.log ('opened database connection')
+                console.log ('opened database connection'.green);
                 async.parallel ([
                     function (callback) {
                         db.collection ("files", function (err, col) {
@@ -155,24 +155,12 @@ var start = function (callback) {
     ], function () {
         console.log ('starting index refresh process'.green);
         heartbeat ();
+        console.log ('actively scanning all mountpoints'.white);
+        async.each (config.mountPoints, function (point, callback) {
+            scan (point, callback, undefined, undefined, true);
+        });
         callback ();
     });
-};
-
-/**
-Add a directory expected to be found in one of the 
-    {@link FileCache_configuration#mountpoints|configured mountpoints} as 
-    an indexed directory. Recursively scan for valid files. Cache file
-    path associations and directory modification timestamps. Hit the 
-    callback when existence of the target directory is confirmed (or not).
-@param {string} dir
-@param {function} callback Boolean argument indicates whether directory 
-    exists.
-*/
-var indexDirectory = function (dir, callback) {
-    async.each (config.mountPoints, function (point, callback) {
-        scan (point + dir, callback, undefined, undefined, true);
-    }, callback);
 };
 
 /**
@@ -310,59 +298,6 @@ var scan = function (dir, callback, stats, rec, force) {
     });
 };
 
-/**
-Drop a directory from the index. Cancel all scheduled polls and rescans.
-    Eliminate records from the database file.
-@param {string} dir
-*/
-var dropDirectory = function (dir, callback) {
-    async.each (config.mountPoints, function (point, callback) {
-        destroy (point + dir, callback);
-    }, callback);
-};
-
-var destroy = function (dir, callback) {
-    if (dir[dir.length-1] != '/')
-        dir += '/';
-    fs.readdir (dir, function (err, files) {
-        if (err)
-            return callback ();
-        
-        directoriesCollection.remove ({_id:dir});
-        
-        async.each (files, function (file, callback) {
-            fs.stat (dir + file, function (err, stats) {
-                if (err || !stats)
-                    return callback ();
-                if (stats.isDirectory())
-                    return destroy (dir+file+'/', callback);
-                
-                // evaluate the file extension
-                // trailing extensions first
-                var workingName = file;
-                for (var i=0,j=config.trailingExtensions.length; i<j; i++) {
-                    var extension = config.trailingExtensions[i];
-                    if (workingName.slice (-1 * extension.length) == extension) {
-                        // trailing extension matched
-                        workingName = workingName.slice (0, -1 * (extension.length+1));
-                        break;
-                    }
-                }
-                // primary extensions second
-                for (var i=0,j=config.fileExtensions.length; i<j; i++) {
-                    var extension = config.fileExtensions[i];
-                    if (workingName.slice (-1 * extension.length) == extension) {
-                        // primary extension matched - we have a valid file!
-                        workingName = workingName.slice (0, -1 * (extension.length+1));
-                        filesCollection.remove ({_id:workingName});
-                        return callback ();
-                    }
-                }
-                callback ();
-            });
-        }, callback);
-    });
-};
 
 // schedules rescans of directories
 var heartbeat = function () {
@@ -397,7 +332,5 @@ var heartbeat = function () {
 module.exports = {
     configure:          configure,
     start:              start,
-    indexDirectory:     indexDirectory,
-    dropDirectory:      dropDirectory,
     getPath:            getPath
 };
