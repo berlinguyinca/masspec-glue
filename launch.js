@@ -9,12 +9,14 @@ var localdir = require('path').dirname (module.filename);
 var configFilename = process.argv.length > 2 ?
     process.argv[2] : process.env.npm_package_config_config;
 
-fs.readFile (configFilename, function (err, configFileStr) {
+fs.readFile (configFilename, {encoding:"UTF8"}, function (err, configFileStr) {
     if (err || !configFileStr) {
         console.log ("Configuration not found.\n".red + configFilename);
         process.exit();
     }
     
+    configFileStr = configFileStr.replace (/\/\/.*/g, '');
+
     try {
         var configDoc;
         if (configFilename.slice (-5) == ".json")

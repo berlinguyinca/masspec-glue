@@ -40,12 +40,12 @@ console.log ('\n\n\
     Testing Masspec Glue Server\n\
 ......................................................................................'.blue
 );
-fs.readFile (localdir + '/tests/testconf.json', function (err, configFileStr) {
+fs.readFile (localdir + '/tests/testconf.json', {encoding:"UTF8"}, function (err, configFileStr) {
     if (err || !configFileStr) {
         console.log ("Configuration not found.\n".red + (localdir + '/testconf.json').blue);
         process.exit();
     }
-    
+    configFileStr = configFileStr.replace (/\/\/.*/g, '');
     mg.configure (JSON.parse (configFileStr, function (key, val) {
         if (!(val instanceof Array)) return val;
         var match;

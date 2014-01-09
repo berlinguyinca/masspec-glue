@@ -6,7 +6,7 @@
             "mzxml",
             "xml"
         ],
-        "mountPoints":      [
+        "mountPoints":      [       // comments ok?
             "$LIBDIR/tests/playground/mount0",
             "$LIBDIR/tests/playground/mount1",
             "$LIBDIR/tests/playground/mount2",

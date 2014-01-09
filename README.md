@@ -16,8 +16,7 @@ for examples of the structured properties dialect, see
 `tests/testConf.properties`.
 
 Here is a sample configuration (mostly the default configuration) in 
-JSON (with js-style comments added - real configuration file must not 
-have comments!)
+JSON. Doubleslash comments are permitted in config files.
 ```javascript
 {
     "port":           	9001,		// the web service listens on this port
@@ -41,7 +40,7 @@ have comments!)
 	    "refreshFuzz":      180000, // max mills to add randomly to rescan timer.
 	    "heartRate":        1000,   // time to wait after zero scheduled rescans are found
 	    "heartRateFuzz":    1000,   // before checking again.
-	    "statsInFlight":    50		// crude file access parallelism limiter.
+	    "statsInFlight":    50		// crude file access parallelism limiter. Reduce if too many calls to stat occur at once.
 	},
     Database:       {
 		"ip": 				"127.0.0.1",		// access information for the mongodb 
@@ -55,10 +54,10 @@ have comments!)
 }
 ```
 
-`FileCache.fileExtensions`, `FileCache.mountPoints` and `Database.ip` 
-are typically the only fields which must be configured. masspec_glue has 
-been simplified from its original design. There is no longer any 
-`/index` endpoint. Only the endpoints `/data/[filename]` and 
+`FileCache.fileExtensions` and `FileCache.mountPoints` are typically 
+the only fields which must be configured. masspec_glue has been 
+simplified from its original design. There is no longer any `/index` 
+endpoint. Only the endpoints `/data/[filename]` and 
 `/stat/[filename]` are active. Both use the GET verb and are therefor 
 accessible from the browser for testing.
 
