@@ -123,7 +123,7 @@ var start = function (callback) {
     ], function () {
         console.log ('starting index refresh process'.green);
         heartbeat ();
-        console.log ('actively scanning all mountpoints'.white);
+        console.log ('actively scanning all mountpoints'.green);
         async.each (config.mountPoints, function (point, callback) {
             scan (point, callback, undefined, undefined, true);
         });
@@ -151,7 +151,7 @@ var getPath = function (id, callback) {
 
 
 // recursive
-var scan = function (dir, callback, stats, rec, force) {
+var scan = function (dir, callback, stats, rec) {
     if (dir[dir.length-1] != '/')
         dir += '/';
     var rec;
@@ -172,7 +172,7 @@ var scan = function (dir, callback, stats, rec, force) {
         if (!stats)
             return callback (false);
         
-        if (!force && rec && rec.m == stats.mtime.getTime())
+        if (rec && rec.m == stats.mtime.getTime())
             // directory is unmodified
             return callback (true);
         
@@ -182,42 +182,57 @@ var scan = function (dir, callback, stats, rec, force) {
             console.log ("Indexing new directory "+dir);
             novelDir = true;
         }
-        directoriesCollection.update (
-            {_id:dir},
-            {$set:{
-                m:          stats.mtime.getTime(),
-                n:          (new Date()).getTime() + 
-                            config.refresh + 
-                            Math.floor (
-                                config.refreshFuzz * Math.random()
-                            )
-            }},
-            {safe:true, upsert:true},
-            function (err) {
-                if (err) {
-                    console.log ('ERROR: db failure while writing to "directories"');
-                    console.log (err);
-                    console.log (err.stack);
-                }
-                fs.readdir (dir, function (err, files) {
+        fs.readdir (dir, function (err, files) {
+            if (err) {
+                console.log ('ERROR: sudden fs read error. Expected directory at '+dir);
+                return callback (false);
+            }
+
+            directoriesCollection.update (
+                {_id:dir},
+                {$set:{
+                    m:          stats.mtime.getTime(),
+                    n:          (new Date()).getTime() + 
+                                config.refresh + 
+                                Math.floor (
+                                    config.refreshFuzz * Math.random()
+                                ),
+                    l:          files
+                }},
+                {safe:true, upsert:true},
+                function (err) {
                     if (err) {
-                        console.log ('ERROR: sudden fs read error. Expected directory at '+dir);
-                        return callback (false);
+                        console.log ('ERROR: db failure while writing to "directories"');
+                        console.log (err);
+                        console.log (err.stack);
                     }
-                    
                     if (!files || !files.length)
                         return callback (true);
                     
-                    // search for data files and directories
-                    async.eachLimit (files, config.statsInFlight, function (fname, callback) {
+                    // use the old and new file lists to target only new or removed files
+                    var old = rec ? rec.l || [] : [];
+                    var reg = {};
+                    var add = [];
+                    for (var i=0,j=old.length; i<j; i++) 
+                        reg[old[i]] = true;
+                    for (var i=0,j=files.length; i<j; i++) {
+                        var name = files[i];
+                        if (!reg[name]) {
+                            add.push (name);
+                            delete reg[name];
+                        }
+                    }
+                    var drop = Object.keys(reg);
+
+                    async.eachLimit (add, config.statsInFlight, function (fname, callback) {
                         fs.stat (dir + fname, function (err, stats) {
                             if (err || !stats) {
-                                console.log ('ERROR: stat failed for ' + dir + fname);
+                                console.log ('ERROR: stat failed for '.red + (dir+fname).blue);
                                 return callback();
                             }
                             if (stats.isDirectory())
                                 // recurse into directory
-                                return scan (dir + fname + '/', callback, stats, undefined, force);
+                                return scan (dir + fname + '/', callback, stats, undefined);
                             
                             // evaluate the file extension
                             // trailing extensions first
@@ -238,14 +253,14 @@ var scan = function (dir, callback, stats, rec, force) {
                                 if (workingName.slice (-1 * extension.length) == extension) {
                                     // primary extension matched - we have a valid file!
                                     if (novelDir)
-                                        console.log ('  Indexed new file '+dir+fname);
+                                        console.log ('  Indexed new file '.white+(dir+fname).blue);
                                     filesCollection.update (
                                         {_id:workingName},
                                         {$set:{p:dir+fname, x:extension, s:stats.size}},
                                         {upsert:true, safe:true},
                                         function (err) {
                                             if (err) {
-                                                console.log ('ERROR: db failure while writing to "files"');
+                                                console.log ('ERROR: db failure while writing to "files"'.red);
                                                 console.log (err);
                                                 console.log (err.stack);
                                             }
@@ -260,10 +275,45 @@ var scan = function (dir, callback, stats, rec, force) {
                         // this is the final end of a successful scan
                         callback (true);
                     });
+                    
+                    async.eachLimit (drop, config.statsInFlight, function (fname, callback) {
+                        fs.stat (dir + fname, function (err, stats) {
+                            if (!err && stats && stats.isDirectory()) {
+                                dropDir (dir+fname+'/');
+                                return callback();
+                            }
+                            filesCollection.remove ({_id:fname});
+                            callback();
+                        });
+                    });
                 });
             }
         );
     });
+};
+
+
+
+var dropDir = function (dir) {
+    fs.readdir (dir, function (err, files) {
+        if (err) {
+            console.log ('cannot read mount point'.red);
+            return;
+        }
+        async.eachLimit (files, config.statsInFlight, function (fname) {
+            fs.stat (dir+fname, function (err, stats) {
+                if (err || !stats) {
+                    console.log ('cannot stat file '.red + (dir+fname).yellow)
+                }
+                if (stats.isDirectory()) {
+                    directoriesCollection.remove ({_id:fname});
+                    dropDir (dir + fname + '/');
+                    return;
+                }
+                filesCollection.remove ({_id:fname});
+            });
+        });
+    })
 };
 
 

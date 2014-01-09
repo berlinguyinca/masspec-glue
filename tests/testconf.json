@@ -1,5 +1,4 @@
 {
-    "databaseName":     "mgTest",
     "FileCache":        {
         "fileExtensions":   [
             "cdf",
@@ -17,5 +16,8 @@
         "refreshFuzz":      1000,
         "heartRate":         200,
         "heartRateFuzz":     200
+    },
+    "Database":         {
+        "name":             "mgTest"
     }
 }

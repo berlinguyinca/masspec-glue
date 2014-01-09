@@ -75,6 +75,7 @@ fs.readFile (localdir + '/tests/testconf.json', function (err, configFileStr) {
             function (callback) {
                 tryServer ("get", "/data/twertwergbhndgf.mzxml", function (data) {
                     if (data !== '<thing>twertwergbhndgf</thing>\n') {
+                        console.log (data);
                         console.log ('ERROR - failed to return correct data file (mount0/able/twertwergbhndgf.mzxml).'.red);
                         process.exit ();
                     }

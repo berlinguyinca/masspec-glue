@@ -27,14 +27,14 @@ var start = function (callback) {
 
 var getCollection = function (name, callback) {
 	var cname = config.collections[name];
-	db.collection (name, function (err, col) {
+	db.collection (cname, function (err, col) {
 		if (err) {
 			console.log ('Could not access database collection '.red + name.yellow);
 			process.exit();
 		}
 		if (name != "directories")
 			return callback (col);
-		col.ensureIndex ({next:1}, function (err) {
+		col.ensureIndex ({n:1}, function (err) {
 			console.log ("setting database index".blue);
             if (err) {
                 console.log ('ERROR - could not ensure database index'.red);
