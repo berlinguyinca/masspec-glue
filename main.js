@@ -6,6 +6,7 @@ require ('./DataUtils'); // patches merging etc. onto Object
 require ('colors');
 
 var FileCache = require ('./FileCache');
+var Database = require ('./Database');
 var endpoints = {
     data:                   require ('./data'),
     stat:                   require ('./stat')
@@ -27,17 +28,23 @@ Index and host LCMS output files.
     that it is invalid to use any default endpoint as an override.
 @property {Number} processes Override the number of times to prefork the server.
     The default is one child fork for each available CPU core.
+@property {string} databaseIP IP address of a mongod or mongos instance.
+    Default: "127.0.0.1"
+@property {number} databasePort Port number for the database server. 
+    Default: 27017.
+@property {string} databaseName The Name of the Database used by 
+    masspec_glue on the configured mongodb instance.
 @property {FileCache.configuration} FileCache Configuration options for the 
     retrieval and caching of files.
-@property {Object} interface Configuration documents for the service endpoints, 
-    mapped by either the default or overridden endpoint name.
+@property {Database.configuration} Database Configuration options for the 
+    mongodb persistence layer.
 */
 var config = {
     port:           9001,
     endpoints:      {},
     processes:      require('os').cpus().length,
     FileCache:      {},
-    interface:      {}
+    Database:       {}
 };
 
 // for normalizing interface configs to one, reliable endpoint name
@@ -51,25 +58,6 @@ Set configuration options for the masspec-glue server.
 */
 var configure = function (newConf) {
     config.merge (newConf);
-    if (newConf.interface) // update the canonical interface config docs 
-        for (var interfaceName in newConf.interface)
-            if (interfaceConfigs[interfaceName])
-                interfaceConfigs[interfaceName].merge (
-                    newConf.interface[interfaceName]
-                );
-            else if (
-                config.endpoints[interfaceName] && 
-                interfaceConfigs[config.endpoints[interfaceName]]
-            )
-                interfaceConfigs[conf.endpoints[interfaceName]].merge (
-                    newConf.interface[interfaceName]
-                );
-            else
-                console.log ((
-                    'cannot configure unknown endpoint "' +
-                    interfaceName + 
-                    '"'
-                ).red);
     
     if (cluster.isMaster)
         return; // just store the config for now
@@ -77,23 +65,8 @@ var configure = function (newConf) {
     // child clusters should propogate config updates
     if (newConf.FileCache)
         FileCache.configure (newConf.FileCache);
-    if (newConf.interface) // update the canonical interface config docs 
-        for (var interfaceName in newConf.interface)
-            if (endpoints[interfaceName])
-                endpoints[interfaceName].configure (newConf[interfaceName]);
-            else if (
-                config.endpoints[interfaceName] && 
-                endpoints[config.endpoints[interfaceName]]
-            )
-                endpoints[config.endpoints[interfaceName]].configure (
-                    newConf[interfaceName]
-                );
-            else
-                console.log ((
-                    'cannot configure unknown endpoint "' +
-                    interfaceName + 
-                    '"'
-                ).red);
+    if (newConf.Database)
+        Database.configure (newConf.Database)
 };
 
 /**
@@ -131,31 +104,33 @@ var start = function (callback) {
     }
     
     // child forks need to propogate the start signal
-    FileCache.start (function(){
-        var waiting = 0;
-        for (var interfaceName in endpoints) {
-            waiting++;
-            endpoints[interfaceName].start (function(){
-                if (--waiting)
-                    return; // more endpoints working
-                if (callback) callback();
-            });
-        }
-        
-        // finalize endpoint overrides
-        for (var override in config.endpoints) {
-            var old = config.endpoints[override];
-            if (endpoints[old]) {
-                console.log (
-                    'overriding endpoint "'.white +
-                    old.blue + 
-                    '" with new endpoints "'.white +
-                    override.blue
-                );
-                endpoints[override] = endpoints[old];
-                delete endpoints[old];
+    Database.start (function () {
+        FileCache.start (function(){
+            var waiting = 0;
+            for (var interfaceName in endpoints) {
+                waiting++;
+                endpoints[interfaceName].start (function(){
+                    if (--waiting)
+                        return; // more endpoints working
+                    if (callback) callback();
+                });
             }
-        }
+            
+            // finalize endpoint overrides
+            for (var override in config.endpoints) {
+                var old = config.endpoints[override];
+                if (endpoints[old]) {
+                    console.log (
+                        'overriding endpoint "'.white +
+                        old.blue + 
+                        '" with new endpoints "'.white +
+                        override.blue
+                    );
+                    endpoints[override] = endpoints[old];
+                    delete endpoints[old];
+                }
+            }
+        });
     });
 };
 

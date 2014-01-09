@@ -1,6 +1,10 @@
 {
+    "databaseName":     "mgTest",
     "FileCache":        {
         "fileExtensions":   [
+            "cdf",
+            "txt",
+            "mzxml",
             "xml"
         ],
         "mountPoints":      [

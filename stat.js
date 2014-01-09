@@ -69,7 +69,6 @@ var react = function (request, response) {
             }
             
             var output = JSON.stringify ({
-                ext:            ext,
                 size:           stats.size,
                 created:        stats.ctime.getTime(),
                 modified:       stats.mtime.getTime()

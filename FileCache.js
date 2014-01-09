@@ -1,7 +1,7 @@
 
 var fs = require ('fs');
 var async = require ('async');
-var Mongo = require ('mongodb');
+var Database = require ('./Database');
 
 /**
 Associates unique filenames with file paths on the system. Performs 
@@ -13,12 +13,6 @@ Associates unique filenames with file paths on the system. Performs
 /**
 @class configuration
 @memberOf FileCache
-@property {string} databaseIP IP address of a mongod or mongos instance.
-    Default: "127.0.0.1"
-@property {number} databasePort Port number for the database server. 
-    Default: 27017.
-@property {string} databaseName The Name of the Database used by 
-    masspec_glue on the configured mongodb instance.
 @property {Array.<string>} mountPoints Local or absolute filepath(s) within 
     which directories and files are to be indexed. The indexed filesystem 
     is a union of these directories.
@@ -43,16 +37,9 @@ Associates unique filenames with file paths on the system. Performs
     starving the event loop, but overly low numbers may reduce parallelism 
     and therefor performance. Default: 50.
 */
-config = {
-    databaseIP:         "127.0.0.1",
-    databasePort:       27017,
-    databaseName:       "masspec-glue",
+var config = { 
     mountPoints:        [],
-    fileExtensions:     [
-        "cdf",
-        "txt",
-        "mzxml"
-    ],
+    fileExtensions:     [],
     trailingExtensions: [
         "gz",
         "tar",
@@ -118,39 +105,20 @@ var start = function (callback) {
         },
         // setup the database
         function (callback) {
-            var dbsrv = new Mongo.Server (config.databaseIP, config.databasePort, {});
-            var db = new Mongo.Db (config.databaseName, dbsrv, {journal:false});
-            db.open (function () {
-                console.log ('opened database connection'.green);
-                async.parallel ([
-                    function (callback) {
-                        db.collection ("files", function (err, col) {
-                            if (err) {
-                                console.log ("Database connection error.".red);
-                                process.exit();
-                            }
-                            filesCollection = col;
-                            callback();
-                        });
-                    },
-                    function (callback) {
-                        db.collection ("directories", function (err, col) {
-                            if (err) {
-                                console.log ("Database connection error.".red);
-                                process.exit();
-                            }
-                            directoriesCollection = col;
-                            directoriesCollection.ensureIndex ({next:1}, function (err) {
-                                if (err) {
-                                    console.log ('ERROR - could not ensure database index'.red);
-                                    process.exit();
-                                }
-                                callback ();
-                            });
-                        });
-                    }
-                ], callback);
-            });
+            async.parallel ([
+                function (callback) {
+                    Database.getCollection ("files", function (col) {
+                        filesCollection = col;
+                        callback();
+                    });
+                },
+                function (callback) {
+                    Database.getCollection ("directories", function (col) {
+                        directoriesCollection = col;
+                        callback ();
+                    });
+                }
+            ], callback);
         }
     ], function () {
         console.log ('starting index refresh process'.green);
@@ -173,10 +141,10 @@ var getPath = function (id, callback) {
         // verify that the file is still there
         if (err || !rec)
             return callback();
-        fs.stat (rec.path, function (err, stats) {
+        fs.stat (rec.p, function (err, stats) {
             if (err || !stats)
                 return callback();
-            callback (rec.path, rec.ext, rec.size);
+            callback (rec.p, rec.x, rec.s);
         });
     });
 };
@@ -218,7 +186,7 @@ var scan = function (dir, callback, stats, rec, force) {
             {_id:dir},
             {$set:{
                 m:          stats.mtime.getTime(),
-                next:       (new Date()).getTime() + 
+                n:          (new Date()).getTime() + 
                             config.refresh + 
                             Math.floor (
                                 config.refreshFuzz * Math.random()
@@ -273,7 +241,7 @@ var scan = function (dir, callback, stats, rec, force) {
                                         console.log ('  Indexed new file '+dir+fname);
                                     filesCollection.update (
                                         {_id:workingName},
-                                        {$set:{path:dir+fname, ext:fileExtension, size:stats.size}},
+                                        {$set:{p:dir+fname, x:extension, s:stats.size}},
                                         {upsert:true, safe:true},
                                         function (err) {
                                             if (err) {
@@ -305,10 +273,10 @@ var heartbeat = function () {
     var next = now + config.refresh + Math.floor(config.refreshFuzz * Math.random());
     // initially grab the job by 
     directoriesCollection.findAndModify (
-        {next:{$lt:now}},
+        {n:{$lt:now}},
         {},
         {$set:{
-            next:   next
+            n:      next
         }},
         function (err, rec) {
             if (err) console.log ("db access problem".red, err);
