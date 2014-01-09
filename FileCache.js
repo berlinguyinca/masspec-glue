@@ -4,39 +4,39 @@ var async = require ('async');
 var Database = require ('./Database');
 var MCUID = require ('./MCUID');
 
-/**
+/*      @module masspec_glue.FileCache
 Associates unique filenames with file paths on the system. Performs 
     directory scans and polls. Persists path associations and modification 
     timestamps of intermediate directories to prevent unnecessary rescans.
-@name FileCache
-@module
 */
-/**
-@class configuration
-@memberOf FileCache
-@property {Array.<string>} mountPoints Local or absolute filepath(s) within 
-    which directories and files are to be indexed. The indexed filesystem 
-    is a union of these directories.
-@property {Array.<string>} fileExtensions File extensions to cache, without 
-    leading dot. Default: ["cdf","txt","mzXml"]
-@property {Array.<string>} trailingExtensions Trailing file extensions to 
-    ignore when evaluating file extensions. 
+/*      @class Configuration
+@Array mountPoints 
+    Local or absolute filepath(s) within which directories and files are 
+    to be indexed. The indexed filesystem is a union of these directories.
+@Array fileExtensions 
+    File extensions to cache, without leading dot. Default: 
+    ["cdf","txt","mzXml"]
+@Array trailingExtensions 
+    Trailing file extensions to ignore when evaluating file extensions. 
     Default: ["gz","tar","tar.gz","zip"]
-@property {number} refresh Number of milliseconds to wait before stat-ing 
-    an indexed directory again. Default: three minutes.
-@property {number} refreshFuzz Maximum number of milliseconds to be 
-    randomly added to the poll time. Helps prevent big clusters of stat
-    jobs. Default: three minutes.
-@property {number} heartRate Minimum number of milliseconds to wait before 
-    repolling the database for directories in need of a rescan. Default:
-    1000ms.
-@property {number} heartRateFuzz Maximum number of milliseconds to be 
-    randomly added to the heartRate each cycle. Helps multiple processes 
-    avoid bothering the database at the same time. Default: 1000ms.
-@property {number} statsInFlight Number of simultaneous file index
-    operations to attempt. A low number here prevents hammering the db or 
-    starving the event loop, but overly low numbers may reduce parallelism 
-    and therefor performance. Default: 50.
+@Number refresh 
+    Number of milliseconds to wait before stat-ing an indexed directory 
+    again. Default: three minutes.
+@Number refreshFuzz 
+    Maximum number of milliseconds to be randomly added to the poll time. 
+    Helps prevent big clusters of stat jobs. Default: three minutes.
+@Number heartRate
+    Minimum number of milliseconds to wait before repolling the database 
+    for directories in need of a rescan. Default:1000ms.
+@Number heartRateFuzz 
+    Maximum number of milliseconds to be randomly added to the heartRate 
+    each cycle. Helps multiple processes avoid bothering the database at 
+    the same time. Default: 1000ms.
+@Number statsInFlight
+    Number of simultaneous file index operations to attempt. A low number 
+    here prevents hammering the db or starving the event loop, but overly 
+    low numbers may reduce parallelism and therefor performance. Default: 
+    50.
 */
 var config = { 
     mountPoints:        [],
@@ -54,9 +54,9 @@ var config = {
     statsInFlight:      50
 };
 
-/**
-Set configuration options.
-@param {FileCache.configuration} newConf
+/*      @Function configure
+    Set configuration options.
+@argument/configuration newConf
 */
 var configure = function (newConf) {
     config.merge (newConf);
@@ -64,9 +64,11 @@ var configure = function (newConf) {
 
 var filesCollection;
 var directoriesCollection;
-/**
-Access the database file. Begin any necessary scan operations.
-@param {function} callback No arguments.
+/*      @Function start
+    Access the database file. Begin any necessary scan operations.
+@argument/Function callback 
+    Called when the module is 100% ready to serve requests. No 
+    arguments will be supplied.
 */
 var start = function (callback) {
     async.parallel ([
@@ -132,10 +134,10 @@ var start = function (callback) {
     });
 };
 
-/**
-Get the full system path of a file by unique filename.
-@param {string} id
-@param {function} callback
+/*      @Function getPath
+    Get the full system path of a file by unique filename.
+@argument/String id
+@argument/Function callback
 */
 var getPath = function (id, callback) {
     filesCollection.findOne ({_id:id},function (err, rec) {
@@ -301,8 +303,6 @@ var scan = function (dir, callback, stats, rec) {
     });
 };
 
-
-
 var dropDir = function (dir) {
     fs.readdir (dir, function (err, files) {
         if (err) {
@@ -353,7 +353,6 @@ var heartbeat = function () {
         }
     );
 };
-
 
 
 module.exports = {

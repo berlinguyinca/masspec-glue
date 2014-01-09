@@ -1,7 +1,18 @@
 
 
+/*		@module masspec_glue.Database
+	Centralizes database configuration and simplifies object
+	sharing for the mongodb interface. Get your Collection 
+	instances here!
+*/
 var Mongo = require ('mongodb');
 
+/*		@class Configuration
+@String ip
+@Number port
+@String name
+@Object collections
+*/
 var config = {
 	ip: 				"127.0.0.1",
 	port: 				27017,

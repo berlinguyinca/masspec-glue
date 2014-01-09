@@ -23,7 +23,10 @@ JSON. Doubleslash comments are permitted in config files.
     "endpoints":      	{},			// changes the URLs where services reside
     "processes":      	1,			// fork to n subprocesses
     "FileCache":      	{
-	    "mountPoints":  	[],		// these directory paths are indexed
+	    "mountPoints":  	[		// these directory paths are indexed
+	    	"/mnt/luna/gctof/a",
+	    	"/mnt/luna/gctof/b"
+	    ],		
 	    "fileExtensions":   [		// files with these extensions are indexed
             "cdf",
             "txt",
@@ -60,6 +63,29 @@ simplified from its original design. There is no longer any `/index`
 endpoint. Only the endpoints `/data/[filename]` and 
 `/stat/[filename]` are active. Both use the GET verb and are therefor 
 accessible from the browser for testing.
+
+Here is an alternate example:
+```javascript
+{
+	"port":				80,
+	"endpoints":		{
+		"photos":			"data"
+	},
+	"FileCache":		{
+		"mountPoints":		[
+			"/Users/dudio/Photos/",
+			"/Users/labdrop/Photo\ Drop"
+		],
+		"refresh":			3000,
+		"refreshFuzz":		3000,
+		"statsInFlight":	12
+	},
+	"Database":			{
+		"ip":			"192.168.0.4",
+		"name":			"photos_glue"
+	}
+}
+```
 
 Launch masspec_glue with `masspec_glue /path/to/config.json`. It will 
 immediately begin listening on `port`.

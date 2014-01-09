@@ -12,32 +12,24 @@ var endpoints = {
     stat:                   require ('./stat')
 };
 
-/**
-Index and host LCMS output files.
-@name masspec-glue
-@module
+/*      @module masspec_glue
+    Index and serve Metbolomics Core raw data files.
 */
-/**
-@name configuration
-@memberOf masspec-glue
-@class
-@property {number} port Listen on all incoming ports with the chosen port 
+/*      @class Configuration
+@Number port Listen on all incoming ports with the chosen port 
     number.
-@property endpoints {Object.<string,string>} Override the URLs used by service 
-    endpoints, by mapping the override name to the default name. Note 
-    that it is invalid to use any default endpoint as an override.
-@property {Number} processes Override the number of times to prefork the server.
-    The default is one child fork for each available CPU core.
-@property {string} databaseIP IP address of a mongod or mongos instance.
-    Default: "127.0.0.1"
-@property {number} databasePort Port number for the database server. 
-    Default: 27017.
-@property {string} databaseName The Name of the Database used by 
-    masspec_glue on the configured mongodb instance.
-@property {FileCache.configuration} FileCache Configuration options for the 
-    retrieval and caching of files.
-@property {Database.configuration} Database Configuration options for the 
-    mongodb persistence layer.
+@Object endpoints 
+    Override the URLs used by service endpoints, by mapping the 
+    override name to the default name. Note that it is invalid 
+    to use any default endpoint as an override.
+@Number processes 
+    Override the number of times to prefork the server. The 
+    default is one child fork for each available CPU core.
+@masspec_glue.FileCache.Configuration FileCache 
+    Configuration options for the retrieval and caching of 
+    files.
+@masspec_glue.Database.Configuration Database 
+    Configuration options for the mongodb persistence layer.
 */
 var config = {
     port:           9001,
@@ -52,9 +44,9 @@ var interfaceConfigs = {
     getFilePaths:       {}
 };
 
-/**
-Set configuration options for the masspec-glue server.
-@param {masspec-glue.configuration} newConf
+/*      @Function configure
+    Set configuration options for the masspec-glue server.
+@argument/masspec-glue.Configuration newConf
 */
 var configure = function (newConf) {
     config.merge (newConf);
@@ -69,10 +61,10 @@ var configure = function (newConf) {
         Database.configure (newConf.Database)
 };
 
-/**
-Finalize the configuration, do all necessary initial setup, prefork, and 
-    listen on the configured socket.
-@param {function} callback
+/*      @Function start
+    Finalize the configuration, do all necessary initial setup, 
+    prefork, and listen on the configured socket.
+@argument/Function callback
 */
 var start = function (callback) {
     if (cluster.isMaster) {
