@@ -2,6 +2,7 @@
 var fs = require ('fs');
 var async = require ('async');
 var Database = require ('./Database');
+var MCUID = require ('./MCUID');
 
 /**
 Associates unique filenames with file paths on the system. Performs 
@@ -141,10 +142,10 @@ var getPath = function (id, callback) {
         // verify that the file is still there
         if (err || !rec)
             return callback();
-        fs.stat (rec.p, function (err, stats) {
+        fs.stat (rec.p+rec._id, function (err, stats) {
             if (err || !stats)
                 return callback();
-            callback (rec.p, rec.x, rec.s);
+            callback (rec.p+rec._id, rec.x, rec.s);
         });
     });
 };
@@ -179,7 +180,7 @@ var scan = function (dir, callback, stats, rec) {
         // directory needs a fresh scan
         var novelDir;
         if (!rec) {
-            console.log ("Indexing new directory "+dir);
+            console.log ("Indexed new directory ".white+dir.blue);
             novelDir = true;
         }
         fs.readdir (dir, function (err, files) {
@@ -200,12 +201,14 @@ var scan = function (dir, callback, stats, rec) {
                     l:          files
                 }},
                 {safe:true, upsert:true},
-                function (err) {
+                function (err, confirm) {
                     if (err) {
                         console.log ('ERROR: db failure while writing to "directories"');
                         console.log (err);
                         console.log (err.stack);
                     }
+                    if (!confirm) // somebody preempted this update, just forget about it
+                        return;
                     if (!files || !files.length)
                         return callback (true);
                     
@@ -252,22 +255,28 @@ var scan = function (dir, callback, stats, rec) {
                                 var extension = config.fileExtensions[i];
                                 if (workingName.slice (-1 * extension.length) == extension) {
                                     // primary extension matched - we have a valid file!
-                                    if (novelDir)
+                                    var fileData = {p:dir, x:extension, s:stats.size};
+                                    MCUID (function (id) {
+                                        if (!id) {
+                                            console.log (("Could not create a new MCUID for "+dir+fname).red);
+                                        } else
+                                            fileData.id = id;
                                         console.log ('  Indexed new file '.white+(dir+fname).blue);
-                                    filesCollection.update (
-                                        {_id:workingName},
-                                        {$set:{p:dir+fname, x:extension, s:stats.size}},
-                                        {upsert:true, safe:true},
-                                        function (err) {
-                                            if (err) {
-                                                console.log ('ERROR: db failure while writing to "files"'.red);
-                                                console.log (err);
-                                                console.log (err.stack);
+                                        filesCollection.update (
+                                            {_id:workingName},
+                                            {$set:fileData},
+                                            {upsert:true, safe:true},
+                                            function (err) {
+                                                if (err) {
+                                                    console.log ('ERROR: db failure while writing to "files"'.red);
+                                                    console.log (err);
+                                                    console.log (err.stack);
+                                                }
+                                                callback ();
                                             }
-                                            callback ();
-                                        }
-                                    );
-                                    return;
+                                        );
+                                    });
+                                    return; // IMPORTANT
                                 }
                             }
                         });

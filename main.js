@@ -88,8 +88,23 @@ var start = function (callback) {
         );
 
         async.timesSeries (config.processes, function (n, callback) {
+            console.log (
+                '\n\n____WORKER_'.blue + 
+                n.toString().blue +
+                '__________________________________________________________________________'.blue
+            );
+            var tl = console.log;
+            console.log = function () {
+                var t = ["    "];
+                t.push.apply (t, arguments);
+                return tl.apply (console, t);
+            };
             var worker = cluster.fork();
-            worker.on ('message', function (){callback();});
+            worker.on ('message', function () {
+                console.log = tl;
+                console.log ('______________________________________________________________________________________'.blue);
+                callback ();
+            });
             worker.send (config);
         }, function () {
             console.log ("\

@@ -138,7 +138,7 @@ fs.readFile (localdir + '/tests/testconf.json', {encoding:"UTF8"}, function (err
                             });
                         });
                     }, callback ());
-                }, 5000); // 10s
+                }, 2000); // 10s
             }
         ], function () {
             console.log ('\n\n\

@@ -32,16 +32,26 @@ var getCollection = function (name, callback) {
 			console.log ('Could not access database collection '.red + name.yellow);
 			process.exit();
 		}
-		if (name != "directories")
-			return callback (col);
-		col.ensureIndex ({n:1}, function (err) {
-			console.log ("setting database index".blue);
-            if (err) {
-                console.log ('ERROR - could not ensure database index'.red);
-                process.exit();
-            }
-            callback (col);
-        });
+		if (name == "directories")
+			col.ensureIndex ({n:1}, function (err) {
+				console.log ("ensuring Directories database index".blue);
+	            if (err) {
+	                console.log ('ERROR - could not ensure Directories database index'.red);
+	                process.exit();
+	            }
+	            callback (col);
+	        });
+		else if (name == "files")
+			col.ensureIndex ({id:1}, {unique:true}, function (err) {
+				console.log ("ensuring Files database index".blue);
+	            if (err) {
+	                console.log ('ERROR - could not ensure Files database index'.red);
+	                process.exit();
+	            }
+	            callback (col);
+			})
+		else
+			callback (col);
 	})
 };
 
